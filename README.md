@@ -22,3 +22,8 @@ This package exposes single factory capable to create a instances of the `proxy.
 	}
 
 You can create your own `proxy.HTTPRequestExecutor` and inject it into your `BackendFactory` 
+
+## Disclaimer
+
+Big chunk of the code is a copy/paste from [golang/oauth2](https://github.com/golang/oauth2/) and 
+[devopsfaith/krakend-oauth2-clientcredentials](https://raw.githubusercontent.com/devopsfaith/krakend-oauth2-clientcredentials/).
