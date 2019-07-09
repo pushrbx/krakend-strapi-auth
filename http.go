@@ -2,26 +2,31 @@ package strapi_auth_client
 
 import (
 	"context"
-	"net/http"
-	"strings"
 	"github.com/devopsfaith/krakend/config"
 	"github.com/devopsfaith/krakend/transport/http/client"
+	"github.com/pushrbx/krakend-strapi-auth/local_auth"
+	"net/http"
 )
 
 const Namespace = "github.com/pushrbx/krakend-strapi-auth"
 
 func NewHTTPClient(cfg *config.Backend) client.HTTPClientFactory {
-	strapi_auth, ok := configGetter(cfg.ExtraConfig).(Config)
-	if !ok || strapi_auth.IsDisabled {
+	strapiAuth, ok := configGetter(cfg.ExtraConfig).(Config)
+	if !ok || strapiAuth.IsDisabled {
 		return client.NewHTTPClient
 	}
-}
 
-type Config struct {
-	IsDisabled     bool
-	Identifier       string
-	Password   string
-	AuthURL       string
+	c := local_auth.Config{
+		Identifier: strapiAuth.Identifier,
+		Password:   strapiAuth.Password,
+		AuthUrl:    strapiAuth.AuthUrl,
+	}
+
+	cli := c.Client(context.Background())
+
+	return func(_ context.Context) *http.Client {
+		return cli
+	}
 }
 
 var ZeroCfg = Config{}
@@ -46,7 +51,7 @@ func configGetter(e config.ExtraConfig) interface{} {
 		cfg.Password = v.(string)
 	}
 	if v, ok := tmp["auth_url"]; ok {
-		cfg.AuthURL = v.(string)
+		cfg.AuthUrl = v.(string)
 	}
 
 	return cfg
