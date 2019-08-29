@@ -11,7 +11,7 @@ This package exposes single factory capable to create a instances of the `proxy.
 		"net/http"
 		"github.com/devopsfaith/krakend/config"
 		"github.com/devopsfaith/krakend/proxy"
-		"github.com/devopsfaith/krakend-strapi-auths"
+		"github.com/pushrbx/krakend-strapi-auth"
 	)
 
 	requestExecutorFactory := func(cfg *config.Backend) proxy.HTTPRequestExecutor {
