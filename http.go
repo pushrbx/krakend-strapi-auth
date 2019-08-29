@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/devopsfaith/krakend/config"
 	"github.com/devopsfaith/krakend/transport/http/client"
-	"github.com/pushrbx/krakend-strapi-auth/local_auth"
 	"net/http"
 )
 
@@ -16,7 +15,7 @@ func NewHTTPClient(cfg *config.Backend) client.HTTPClientFactory {
 		return client.NewHTTPClient
 	}
 
-	c := local_auth.Config{
+	c := LocalAuthConfig{
 		Identifier: strapiAuth.Identifier,
 		Password:   strapiAuth.Password,
 		AuthUrl:    strapiAuth.AuthUrl,

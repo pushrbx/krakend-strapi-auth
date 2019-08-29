@@ -63,3 +63,47 @@ type RetrieveError struct {
 func (r *RetrieveError) Error() string {
 	return fmt.Sprintf("strapi_auth: cannot fetch token: %v\nResponse: %s", r.Response.Status, r.Body)
 }
+
+func (c *LocalAuthConfig) TokenSource(ctx context.Context) TokenSource {
+	source := &tokenSource{
+		ctx:  ctx,
+		conf: c,
+	}
+
+	return ReuseTokenSource(nil, source)
+}
+
+type LocalAuthConfig struct {
+	IsDisabled bool
+	Identifier string
+	Password   string
+	AuthUrl    string
+}
+
+type tokenSource struct {
+	ctx  context.Context
+	conf *LocalAuthConfig
+}
+
+func (c *LocalAuthConfig) Client(ctx context.Context) *http.Client {
+	return NewClient(ctx, c.TokenSource(ctx))
+}
+
+func (c *tokenSource) Token() (*Token, error) {
+	v := url.Values{}
+	tk, err := internal.RetrieveToken(c.ctx, c.conf.Identifier, c.conf.Password, c.conf.AuthUrl, v)
+
+	if err != nil {
+		if rErr, ok := err.(*internal.RetrieveError); ok {
+			return nil, (*RetrieveError)(rErr)
+		}
+		return nil, err
+	}
+
+	t := &Token{
+		Jwt:  tk.Jwt,
+		User: tk.User,
+	}
+
+	return t.WithExtra(tk.Raw), nil
+}
