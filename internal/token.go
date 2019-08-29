@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -28,12 +29,6 @@ type tokenJSON struct {
 }
 
 func newTokenRequest(authUrl, identifier, password string, v url.Values) (*http.Request, error) {
-	req, err := http.NewRequest("POST", authUrl, strings.NewReader(v.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
 	v = cloneURLValues(v)
 	if identifier != "" {
 		v.Set("identifier", identifier)
@@ -41,6 +36,14 @@ func newTokenRequest(authUrl, identifier, password string, v url.Values) (*http.
 	if password != "" {
 		v.Set("password", password)
 	}
+
+	data := v.Encode()
+	req, err := http.NewRequest("POST", authUrl, strings.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Content-Length", strconv.Itoa(len(data)))
 
 	return req, nil
 }
