@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/net/context/ctxhttp"
 	"io"
 	"io/ioutil"
@@ -13,12 +14,14 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Token struct {
-	Jwt  string
-	User UserProfile
-	Raw  interface{}
+	Jwt    string
+	User   UserProfile
+	Raw    interface{}
+	Expiry time.Time
 }
 
 // tokenJSON is the struct representing the HTTP response from Strapi's /auth/local endpoint
@@ -107,6 +110,16 @@ func doTokenRoundTrip(ctx context.Context, req *http.Request) (*Token, error) {
 			User: UserProfile{},
 			Raw:  vals,
 		}
+
+		parsedToken, err := ParseJwt(token.Jwt)
+		if err != nil {
+			return nil, err
+		}
+
+		expires := ExtractExp(parsedToken.Claims)
+		if expires != 0 {
+			token.Expiry = time.Now().Add(time.Duration(expires) * time.Second)
+		}
 	default:
 		var tj tokenJSON
 
@@ -115,7 +128,8 @@ func doTokenRoundTrip(ctx context.Context, req *http.Request) (*Token, error) {
 		}
 
 		token = &Token{
-			Jwt: tj.Jwt,
+			Jwt:    tj.Jwt,
+			Expiry: tj.expiry(),
 			User: UserProfile{
 				Id:        tj.User.Id,
 				Blocked:   tj.User.Blocked,
@@ -151,4 +165,35 @@ type RetrieveError struct {
 
 func (r *RetrieveError) Error() string {
 	return fmt.Sprintf("strapi-auth: cannot fetch token: %v\nResponse: %s", r.Response.Status, r.Body)
+}
+
+func (e *tokenJSON) expiry() (t time.Time) {
+	parsedToken, err := ParseJwt(e.Jwt)
+	if err != nil {
+		return
+	}
+
+	if v := ExtractExp(parsedToken.Claims); v != 0 {
+		return time.Now().Add(time.Duration(v) * time.Second)
+	}
+	return
+}
+
+func ExtractExp(c jwt.Claims) int64 {
+	claims := c.(jwt.MapClaims)
+	switch exp := claims["exp"].(type) {
+	case float64:
+		return int64(exp)
+	case json.Number:
+		v, _ := exp.Int64()
+		return v
+	}
+
+	return 0
+}
+
+func ParseJwt(_jwt string) (*jwt.Token, error) {
+	parser := jwt.Parser{}
+	parsedToken, _, err := parser.ParseUnverified(_jwt, jwt.MapClaims{})
+	return parsedToken, err
 }

@@ -26,7 +26,11 @@
 
 [[constraint]]
   name = "github.com/devopsfaith/krakend"
-version = "0.9.0"
+  version = "0.9.0"
+
+[[constraint]]
+  name = "github.com/dgrijalva/jwt-go"
+  version = "3.2.0"
 
 [prune]
   go-tests = true

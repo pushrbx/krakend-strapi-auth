@@ -3,12 +3,20 @@ package strapi_auth_client
 import (
 	"context"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/pushrbx/krakend-strapi-auth/internal"
 	"net/http"
 	"net/url"
+	"time"
 )
 
-// todo: implement expiry
+// expiryDelta determines how earlier a token should be considered
+// expired than its actual expiration time. It is used to avoid late
+// expirations due to client-server time mismatches.
+const expiryDelta = 10 * time.Second
+
+var timeNow = time.Now
+
 type Token struct {
 	Jwt  string               `json:"jwt"`
 	User internal.UserProfile `json:"user"`
@@ -26,9 +34,19 @@ func (t *Token) WithExtra(extra interface{}) *Token {
 	return t2
 }
 
-// todo: implement expiry
 func (t *Token) Valid() bool {
-	return t != nil && t.Jwt != ""
+	return t != nil && t.Jwt != "" && !t.expired()
+}
+
+func (t *Token) expired() bool {
+	tokenParser := jwt.Parser{}
+	parsedToken, _, err := tokenParser.ParseUnverified(t.Jwt, jwt.MapClaims{})
+	if err != nil {
+		return true
+	}
+	unixExp := internal.ExtractExp(parsedToken.Claims)
+	expiry := time.Unix(unixExp, 0)
+	return expiry.Round(0).Add(-expiryDelta).Before(timeNow())
 }
 
 func tokenFromInternal(t *internal.Token) *Token {
